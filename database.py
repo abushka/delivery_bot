@@ -97,7 +97,8 @@ class Category(TableDeclarativeBase):
     # Category has been deleted
     deleted = Column(Boolean, nullable=False)
 
-    parent_id = Column(Integer, ForeignKey("categorys.id"))
+    # parent_id = Column(Integer, ForeignKey("categorys.id"))
+    # product_id = Column(Integer, ForeignKey("products.id"))
 
     # Extra table parameters
     __tablename__ = "categorys"

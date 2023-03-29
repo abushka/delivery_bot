@@ -1171,26 +1171,107 @@ class Worker(threading.Thread):
     def __category_assigment(self, product: Optional[db.Product] = None):
         """Add a category to the product."""
         log.debug("Displaying __category_assigment")
-        # Create an inline keyboard with a single skip button
-        cancel = telegram.InlineKeyboardMarkup([[telegram.InlineKeyboardButton(self.loc.get("menu_skip"),
-                                                                               callback_data="cmd_cancel")]])
-        
+
         products = self.session.query(db.Product).filter_by(deleted=False).all()
+        categorys = self.session.query(db.Category).filter_by(deleted=False).all()
         inline_buttons = []
+        category_inline_buttons = []
         row = []
+        category_row = []
         for product in products:
-            row.append(telegram.InlineKeyboardButton(str(product.name), callback_data=str(product.name)))
+            row.append(telegram.InlineKeyboardButton(str(product.name), callback_data=str(f'product-{product.id}')))
         inline_buttons.append(row)
-        
+
+        for category in categorys:
+            category_row.append(telegram.InlineKeyboardButton(str(category.name), callback_data=str(f'category-{category.id}')))
+        category_inline_buttons.append(category_row)
+
         # Create the keyboard with the cancel button
         inline_buttons.append([telegram.InlineKeyboardButton(self.loc.get("menu_cancel"),
                                                             callback_data="cart_cancel")])
-        
-        
+
+        category_inline_buttons.append([telegram.InlineKeyboardButton(self.loc.get("menu_cancel"),
+                                                            callback_data="cart_cancel")])
+
+
         inline_keyboard = telegram.InlineKeyboardMarkup(inline_buttons)
-        self.bot.send_message(self.chat.id,
-                                    "конечное сообщение с инлайн кнопкой",
-                                    reply_markup=inline_keyboard)
+        category_inline_keyboard = telegram.InlineKeyboardMarkup(category_inline_buttons)
+
+        final_msg = self.bot.send_message(self.chat.id,
+                                          text="конечное сообщение с инлайн кнопкой",
+                                          reply_markup=inline_keyboard)
+        
+        while True:
+            update = self.__wait_for_inlinekeyboard_callback(cancellable=True)
+            if update.data == "cart_cancel":
+                break
+            if update.data.split("-")[0] == 'product':
+                print(update.data.split("-")[1])
+
+                product_id = int(update.data.split("-")[1])
+                product = self.session.query(db.Product).get(product_id)
+                # edit_message_caption
+                self.bot.edit_message_text(chat_id=self.chat.id,
+                                            message_id=final_msg['message_id'],
+                                            text=product.text(w=self),
+                                            reply_markup=category_inline_keyboard)
+            
+            if update.data.split("-")[0] == "category":
+                category_id = int(update.data.split("-")[1])
+                category = self.session.query(db.Category).get(category_id)
+                product.category_id = category_id
+                break
+
+        self.session.commit()
+        print(f'{product} {type(product)}')
+        print(f'{product.name} {type(product.name)}')
+        print(f'{category} {type(category)}')
+        print(f'{category.name} {type(category.name)}')
+        self.bot.edit_message_text(chat_id=self.chat.id,
+                                            message_id=final_msg['message_id'],
+                                            text=self.loc.get("success_new_product_category",
+                                                               category_name=category.name,
+                                                               product_name=product.name))
+        
+                # 
+
+
+                # info = f'{product.name} с id {product_id} и {category.name} с id {category_id}'
+                # self.bot.send_message(self.chat.id, info)
+
+                # product_new_id = db.Product(category_id=category_id,
+                #                     deleted=False)
+                 # Add the record to the database
+
+                # self.session.add(product_new_id)
+                
+                # category.product_id = product_id
+                # category_new_id = db.Category(product_id=product_id,
+                                    # deleted=False)
+                 # Add the record to the database
+                # self.session.add(category_new_id)
+                # self.session.commit()
+
+                # self.session.query(db.Product).get(product_id) = category_id
+
+                
+
+                # self.bot.send_message(self.chat.id, product.name)
+                # print(update)
+                # print(update.data)
+            
+        
+        # # Define the function to handle the callback data
+        # def callback_handler(update: Update, context: CallbackContext):
+        #     query = update.callback_query
+        #     # Check if the callback data is the one we want
+        #     if query.data == 'cart_cancel':
+        #         context.bot.edit_message_text(chat_id=query.message.chat_id, 
+        #                                     message_id=query.message.message_id, 
+        #                                     text=self.loc.get("msg_operation_canceled"))
+
+        
+        
         
 
         # edit message final_msg.message_id 
@@ -1199,12 +1280,21 @@ class Worker(threading.Thread):
         # while True:
         #     # Ask the question to the user
         #     self.bot.send_message(self.chat.id, self.loc.get("ask_product_category"))
+
+        #     product_id = self.__wait_for_regex(r"cat-(?P<category_id>\d{1,10})", cancellable=bool(product))
+        #     if product_id.startswith('cat-'):
+        #         print(product_id)
+                # print(match.group('product_id'))
+
+            # if match := re.search(r'cat-(?P<category_id>\d{1,10})', callback_data):
+            #     category_id = match.group('category_id')
+                
         #     # Display the current name if you're editing an existing product
         #     if product:
         #         self.bot.send_message(self.chat.id, self.loc.get("edit_current_value", value=escape(product.category_id)),
         #                               reply_markup=cancel)
         #         # Wait for an answer
-        #         category_id = self.__wait_for_regex(r"(.*)", cancellable=bool(product))
+                
 
 
     def __edit_product_menu(self, product: Optional[db.Product] = None):
@@ -1275,6 +1365,7 @@ class Worker(threading.Thread):
             product = db.Product(name=name,
                                  description=description,
                                  price=price,
+                                 category_id=0,
                                  deleted=False)
             # Add the record to the database
             self.session.add(product)
@@ -1411,7 +1502,7 @@ class Worker(threading.Thread):
                 # Mark the order as refunded
                 order.refund_date = datetime.datetime.now()
                 # Save the refund reason
-                order.refund_reason = reply
+                order.refund_reason = replyCancelSignal
                 # Refund the credit, reverting the old transaction
                 order.transaction.refunded = True
                 # Update the user's credit

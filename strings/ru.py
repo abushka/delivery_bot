@@ -403,6 +403,10 @@ success_category_edited = "✅ Категория успешно создана/
 # Success: product has been added/edited to the database
 success_product_edited = "✅ Продукт успешно создан/обновлен!"
 
+# Success: product has been a new category
+success_new_product_category = "Вы изменили категорию на <code>{category_name}</code> " \
+            "у продукта <code>{product_name}</code>"
+
 # Success: product has been marked as deleted in the database
 success_category_deleted = "✅ Категория успешно удалена!"
 
