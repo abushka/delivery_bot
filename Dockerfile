@@ -1,5 +1,5 @@
-FROM python:3.10-alpine AS dependencies
-RUN apk add --update build-base python3-dev py-pip musl-dev
+FROM python:3.10 AS dependencies
+RUN apt-get update && apt-get install -y build-essential python3-dev python3-pip musl-dev && ln -s /usr/lib/x86_64-linux-gnu/libc.so /lib/libc.musl-x86_64.so.1
 
 WORKDIR /usr/src/greed
 COPY ./requirements.txt ./requirements.txt
@@ -19,7 +19,7 @@ CMD ["core.py"]
 
 ENV PYTHONUNBUFFERED=1
 ENV CONFIG_PATH="/usr/src/greed/config/config.toml"
-ENV DB_ENGINE="sqlite:////usr/src/greed/data/database.sqlite"
+ENV DB_ENGINE="postgresql://postgres:Abushka123@db:5432/postgres"
 
 LABEL org.opencontainers.image.title="greed"
 LABEL org.opencontainers.image.description="A customizable, multilanguage Telegram shop bot"

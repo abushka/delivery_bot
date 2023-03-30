@@ -265,6 +265,9 @@ text_refunded = "возмещен"
 # Text: product not for sale
 text_not_for_sale = "Не продаётся"
 
+# Text: no products in the category
+no_products_in_the_category = "В этой категории нет товаров"
+
 # Add category: name?
 ask_category_name = "Как назовем категорию?"
 

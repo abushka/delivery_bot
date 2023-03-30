@@ -3,6 +3,7 @@ python-telegram-bot==13.5
 SQLAlchemy==1.4.14
 requests==2.25.1
 toml==0.10.2
+psycopg2-binary
 
 # Sub-dependencies
 APScheduler==3.6.3

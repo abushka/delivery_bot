@@ -503,49 +503,80 @@ class Worker(threading.Thread):
         """User menu to categorys from the shop."""
         log.debug("Displaying __category_menu")
 
+        # products = self.session.query(db.Product).filter_by(deleted=False).all()
         categorys = self.session.query(db.Category).filter_by(deleted=False).all()
-        # buttons = []
-        inline_buttons = []
-        # category_names = []
-        # row = []
-        row = []
-        for category in categorys:
-            # category_names.append(str(category.name))
-            # row.append(telegram.KeyboardButton(str(category.name)))
-            row.append(telegram.InlineKeyboardButton(str(category.name), callback_data=str(category.name)))
-            if category.parent_id is not None:
-                self.bot.send_message(self.chat.id, "123 " + category.parent_id)
-            # buttons.append(row)
-            
-        inline_buttons.append(row)
-            # row = []
-            # row2 = []
 
-
-        # Кейбоард кнопки
-        # self.bot.send_message(self.chat.id, "Жоппы",
-        #                     reply_markup=telegram.ReplyKeyboardMarkup(
-        #                         buttons, one_time_keyboard=False,
-        #                         resize_keyboard=True))
+        category_inline_buttons = []
         
-        # Create the keyboard with the cancel button
-        inline_buttons.append([telegram.InlineKeyboardButton(self.loc.get("menu_cancel"),
+        category_row = []
+
+
+        for category in categorys:
+            category_row.append(telegram.InlineKeyboardButton(str(category.name), callback_data=str(f'category-{category.id}')))
+        category_inline_buttons.append(category_row)
+
+        category_inline_buttons.append([telegram.InlineKeyboardButton(self.loc.get("menu_cancel"),
                                                             callback_data="cart_cancel")])
         
+        category_inline_keyboard = telegram.InlineKeyboardMarkup(category_inline_buttons)
+
+        inline_buttons = []
+        row = []
+
+
+        final_msg = self.bot.send_message(self.chat.id,
+                                          text="Выберите категорию продукта",
+                                          reply_markup=category_inline_keyboard)
         
-        inline_keyboard = telegram.InlineKeyboardMarkup(inline_buttons)
-        # Инлайн кнопки
-        self.bot.send_message(self.chat.id,
-                                    "конечное сообщение с инлайн кнопкой",
-                                    reply_markup=inline_keyboard)
-        
-        # Wait for user input
         while True:
-            callback = self.__wait_for_inlinekeyboard_callback()
-        
-            if callback.data == "cart_cancel":
-                # Stop waiting for user input and go back to the previous menu
-                return
+            update = self.__wait_for_inlinekeyboard_callback(cancellable=True)
+            if update.data == "cart_cancel":
+                self.bot.edit_message_text(chat_id=self.chat.id,
+                            message_id=final_msg['message_id'],
+                            text=self.loc.get("menu_cancel"))
+                break
+            if update.data.split("-")[0] == "category":
+                category_id = int(update.data.split("-")[1])
+                products = self.session.query(db.Product).filter_by(category_id=category_id).all()
+                if len(products) > 0:
+                    for product in products:
+                        row.append(telegram.InlineKeyboardButton(str(product.name), callback_data=str(f'product-{product.id}')))
+                    inline_buttons.append(row)
+                            # Create the keyboard with the cancel button
+                    inline_buttons.append([telegram.InlineKeyboardButton(self.loc.get("menu_cancel"),
+                                                                callback_data="cart_cancel")])
+                    inline_keyboard = telegram.InlineKeyboardMarkup(inline_buttons)
+
+                    self.bot.edit_message_text(chat_id=self.chat.id,
+                                message_id=final_msg['message_id'],
+                                text=product.text(w=self),
+                                reply_markup=inline_keyboard)
+                else:
+                    self.bot.edit_message_text(chat_id=self.chat.id,
+                                message_id=final_msg['message_id'],
+                                text=self.loc.get("no_products_in_the_category"))
+                    break
+                
+            if update.data.split("-")[0] == 'product':
+                print(update.data.split("-")[1])
+                row = []
+                inline_buttons = []
+                # category = self.session.query(db.Category).get(category_id)
+                product_id = int(update.data.split("-")[1])
+                product = self.session.query(db.Product).get(product_id)
+                # edit_message_caption
+                self.bot.edit_message_text(chat_id=self.chat.id,
+                                            message_id=final_msg['message_id'],
+                                            text="всё, хватит",
+                                            reply_markup=category_inline_keyboard)
+            
+
+
+        # self.bot.edit_message_text(chat_id=self.chat.id,
+        #                                     message_id=final_msg['message_id'],
+        #                                     text=self.loc.get("success_new_product_category",
+        #                                                        category_name=category.name,
+        #                                                        product_name=product.name))
  
 
     def __order_menu(self):
@@ -1365,7 +1396,6 @@ class Worker(threading.Thread):
             product = db.Product(name=name,
                                  description=description,
                                  price=price,
-                                 category_id=0,
                                  deleted=False)
             # Add the record to the database
             self.session.add(product)

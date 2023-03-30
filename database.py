@@ -5,7 +5,7 @@ import requests
 import telegram
 from sqlalchemy import Column, ForeignKey, UniqueConstraint
 from sqlalchemy import Integer, BigInteger, String, Text, LargeBinary, DateTime, Boolean
-from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.ext.declarative import declarative_base, DeferredReflection
 from sqlalchemy.orm import relationship, backref
 
 import utils
@@ -20,7 +20,7 @@ TableDeclarativeBase = declarative_base()
 
 
 # Define all the database tables using the sqlalchemy declarative base
-class User(TableDeclarativeBase):
+class User(DeferredReflection ,TableDeclarativeBase):
     """A Telegram user who used the bot at least once."""
 
     # Telegram data
@@ -87,7 +87,7 @@ class User(TableDeclarativeBase):
         return f"<User {self.mention()} having {self.credit} credit>"
     
 
-class Category(TableDeclarativeBase):
+class Category(DeferredReflection, TableDeclarativeBase):
     """A purchasable category."""
 
     # Category id
@@ -116,7 +116,7 @@ class Category(TableDeclarativeBase):
 
 
 
-class Product(TableDeclarativeBase):
+class Product(DeferredReflection, TableDeclarativeBase):
     """A purchasable product."""
 
     # Product id
@@ -176,7 +176,7 @@ class Product(TableDeclarativeBase):
 
 
 
-class Transaction(TableDeclarativeBase):
+class Transaction(DeferredReflection, TableDeclarativeBase):
     """A greed wallet transaction.
     Wallet credit ISN'T calculated from these, but they can be used to recalculate it."""
     # TODO: split this into multiple tables
@@ -232,7 +232,7 @@ class Transaction(TableDeclarativeBase):
         return f"<Transaction {self.transaction_id} for User {self.user_id}>"
 
 
-class Admin(TableDeclarativeBase):
+class Admin(DeferredReflection, TableDeclarativeBase):
     """A greed administrator with his permissions."""
 
     # The telegram id
@@ -255,7 +255,7 @@ class Admin(TableDeclarativeBase):
         return f"<Admin {self.user_id}>"
 
 
-class Order(TableDeclarativeBase):
+class Order(DeferredReflection, TableDeclarativeBase):
     """An order which has been placed by an user.
     It may include multiple products, available in the OrderItem table."""
 
@@ -318,7 +318,7 @@ class Order(TableDeclarativeBase):
                    (w.loc.get("refund_reason", reason=self.refund_reason) if self.refund_date is not None else "")
 
 
-class OrderItem(TableDeclarativeBase):
+class OrderItem(DeferredReflection, TableDeclarativeBase):
     """A product that has been purchased as part of an order."""
 
     # The unique item id
