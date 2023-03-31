@@ -510,9 +510,11 @@ class Worker(threading.Thread):
         
         category_row = []
 
-
         for category in categorys:
             category_row.append(telegram.InlineKeyboardButton(str(category.name), callback_data=str(f'category-{category.id}')))
+            if len(category_row) == 4:
+                category_inline_buttons.append(category_row)
+                category_row = []
         category_inline_buttons.append(category_row)
 
         category_inline_buttons.append([telegram.InlineKeyboardButton(self.loc.get("menu_cancel"),
@@ -541,6 +543,9 @@ class Worker(threading.Thread):
                 if len(products) > 0:
                     for product in products:
                         row.append(telegram.InlineKeyboardButton(str(product.name), callback_data=str(f'product-{product.id}')))
+                        if len(row) == 4:
+                            inline_buttons.append(row)
+                            row = []
                     inline_buttons.append(row)
                             # Create the keyboard with the cancel button
                     inline_buttons.append([telegram.InlineKeyboardButton(self.loc.get("menu_cancel"),
@@ -549,7 +554,7 @@ class Worker(threading.Thread):
 
                     self.bot.edit_message_text(chat_id=self.chat.id,
                                 message_id=final_msg['message_id'],
-                                text=product.text(w=self),
+                                text=self.loc.get("ask_product"),
                                 reply_markup=inline_keyboard)
                 else:
                     self.bot.edit_message_text(chat_id=self.chat.id,
@@ -1211,10 +1216,16 @@ class Worker(threading.Thread):
         category_row = []
         for product in products:
             row.append(telegram.InlineKeyboardButton(str(product.name), callback_data=str(f'product-{product.id}')))
+            if len(row) == 4:
+                inline_buttons.append(row)
+                row = []
         inline_buttons.append(row)
 
         for category in categorys:
             category_row.append(telegram.InlineKeyboardButton(str(category.name), callback_data=str(f'category-{category.id}')))
+            if len(category_row) == 4:
+                category_inline_buttons.append(category_row)
+                category_row = []
         category_inline_buttons.append(category_row)
 
         # Create the keyboard with the cancel button
@@ -1251,18 +1262,16 @@ class Worker(threading.Thread):
                 category_id = int(update.data.split("-")[1])
                 category = self.session.query(db.Category).get(category_id)
                 product.category_id = category_id
+                
+        
+                # TODO: отправляет сообщение что изменили категорию если нажать на "Отмена"
+                self.session.commit()
+                self.bot.edit_message_text(chat_id=self.chat.id,
+                                                    message_id=final_msg['message_id'],
+                                                    text=self.loc.get("success_new_product_category",
+                                                                    category_name=category.name,
+                                                                    product_name=product.name))
                 break
-
-        self.session.commit()
-        print(f'{product} {type(product)}')
-        print(f'{product.name} {type(product.name)}')
-        print(f'{category} {type(category)}')
-        print(f'{category.name} {type(category.name)}')
-        self.bot.edit_message_text(chat_id=self.chat.id,
-                                            message_id=final_msg['message_id'],
-                                            text=self.loc.get("success_new_product_category",
-                                                               category_name=category.name,
-                                                               product_name=product.name))
         
                 # 
 
