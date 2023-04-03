@@ -190,6 +190,8 @@ menu_delete_product = "❌ Удалить продукт"
 # Menu: cancel
 menu_cancel = "🔙 Отмена"
 
+menu_back = "🔙 Назад"
+
 # Menu: skip
 menu_skip = "⏭ Пропустить"
 
