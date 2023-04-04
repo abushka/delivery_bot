@@ -242,7 +242,8 @@ class Admin(DeferredReflection, TableDeclarativeBase):
     edit_categorys = Column(Boolean, default=False)
     edit_products = Column(Boolean, default=False)
     receive_orders = Column(Boolean, default=False)
-    create_transactions = Column(Boolean, default=False)
+    # create_transactions = Column(Boolean, default=False)
+    show_reports = Column(Boolean, default=False)
     display_on_help = Column(Boolean, default=False)
     is_owner = Column(Boolean, default=False)
     # Live mode enabled

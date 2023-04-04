@@ -112,8 +112,7 @@ conversation_confirm_cart = "🛒 Продукты у Вас в корзине:\
 # Live orders mode: start
 conversation_live_orders_start = "Вы в режиме <b>Новые заказы</b>\n" \
                                  "Все новые заказы появятся в этом чате в режиме реального времени," \
-                                 " и их можно отметить ✅ Выполнено" \
-                                 " или ✴️ Возвращено в случае возврата денег." \
+                                 " и их можно отметить ✅ Выполнено." \
  \
 # Live orders mode: stop receiving messages
 conversation_live_orders_stop = "<i>Нажмите Стоп в этом чате, чтобы остановить этот режим.</i>"
@@ -137,7 +136,7 @@ conversation_expired = "🕐  За долгое время я не получи�
                        "Чтобы начать снова, пришлите команду /start ."
 
 # User menu: category
-menu_category = "Категории"
+user_menu_category = "Заказать"
 
 # User menu: from products to category
 menu_from_products_to_category = "Перейти к категориям"
@@ -325,6 +324,9 @@ ask_credit = "Вы хотите изменить баланс Покупател
 admin_properties = "<b>Доступы пользователя {name}:</b>"
 
 # Edit admin: can edit products?
+prop_edit_categorys = "Редактировать категории"
+
+# Edit admin: can edit products?
 prop_edit_products = "Редактировать продукты"
 
 # Edit admin: can receive orders?
@@ -332,6 +334,9 @@ prop_receive_orders = "Получать заказы"
 
 # Edit admin: can create transactions?
 prop_create_transactions = "Управлять транзакциями"
+
+# Edit admin: can show reports?
+prop_show_reports = "Смотреть отчёты"
 
 # Edit admin: show on help message?
 prop_display_on_help = "Показывать покупателям"
@@ -393,10 +398,8 @@ refund_reason = "Причина возврата:\n" \
                 "{reason}"
 
 # Info: informazioni sul bot
-bot_info = 'Этот бот использует <a href="https://github.com/Steffo99/greed">greed</a>,' \
-           ' фреймворк разработан @Steffo для платежей Телеграм и выпущен под лицензией' \
-           ' <a href="https://github.com/Steffo99/greed/blob/master/LICENSE.txt">' \
-           'Affero General Public License 3.0</a>.\n'
+bot_info = 'Вопросы, жалобы, предложения: @YaJ75' \
+            'Разработка ботов: @YaJ75'
 
 # Help: guide
 help_msg = "Инструкция к greed доступна по этому адресу:\n" \

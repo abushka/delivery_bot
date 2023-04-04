@@ -180,7 +180,7 @@ class Worker(threading.Thread):
                                       edit_categorys=True,
                                       edit_products=True,
                                       receive_orders=True,
-                                      create_transactions=True,
+                                      show_reports=True,
                                       display_on_help=True,
                                       is_owner=True,
                                       live_mode=False)
@@ -446,9 +446,9 @@ class Worker(threading.Thread):
         while True:
             # Create a keyboard with the user main menu
             # telegram.KeyboardButton(self.loc.get("menu_order"))
-            keyboard = [[telegram.KeyboardButton(self.loc.get("menu_category")),],
+            # [telegram.KeyboardButton(self.loc.get("menu_add_credit"))],
+            keyboard = [[telegram.KeyboardButton(self.loc.get("user_menu_category")),],
                         [telegram.KeyboardButton(self.loc.get("menu_order_status"))],
-                        [telegram.KeyboardButton(self.loc.get("menu_add_credit"))],
                         [telegram.KeyboardButton(self.loc.get("menu_language"))],
                         [telegram.KeyboardButton(self.loc.get("menu_help")),
                          telegram.KeyboardButton(self.loc.get("menu_bot_info"))]]
@@ -459,10 +459,10 @@ class Worker(threading.Thread):
                                   reply_markup=telegram.ReplyKeyboardMarkup(keyboard, one_time_keyboard=True))
             # Wait for a reply from the user
             selection = self.__wait_for_specific_message([
-                self.loc.get("menu_category"),
+                self.loc.get("user_menu_category"),
                 # self.loc.get("menu_order"),
                 self.loc.get("menu_order_status"),
-                self.loc.get("menu_add_credit"),
+                # self.loc.get("menu_add_credit"),
                 self.loc.get("menu_language"),
                 self.loc.get("menu_help"),
                 self.loc.get("menu_bot_info"),
@@ -470,7 +470,7 @@ class Worker(threading.Thread):
             # After the user reply, update the user data
             self.update_user()
             # if the user has selected the Category option...
-            if selection == self.loc.get("menu_category"):
+            if selection == self.loc.get("user_menu_category"):
                 self.__category_menu()
             # If the user has selected the Order option...
             if selection == self.loc.get("menu_order"):
@@ -481,9 +481,9 @@ class Worker(threading.Thread):
                 # Display the order(s) status
                 self.__order_status()
             # If the user has selected the Add Credit option...
-            elif selection == self.loc.get("menu_add_credit"):
-                # Display the add credit menu
-                self.__add_credit_menu()
+            # elif selection == self.loc.get("menu_add_credit"):
+            #     # Display the add credit menu
+            #     self.__add_credit_menu()
             # If the user has selected the Language option...
             elif selection == self.loc.get("menu_language"):
                 # Display the language menu
@@ -714,7 +714,10 @@ class Worker(threading.Thread):
 
              # If the Remove from cart button has been pressed...
             elif update.data == "cart_remove":
-                cut_name = update.message.caption.split("\n")
+                if update.message.text == None:
+                    cut_name = update.message.caption.split("\n")
+                elif update.message.caption == None:
+                    cut_name = update.message.text.split("\n")
                 # Get the selected product, ensuring it exists
                 p = cart.get(cut_name[0])
                 if p is None:
@@ -788,24 +791,24 @@ class Worker(threading.Thread):
                                           order=order)
                 self.session.add(order_item)
         # Ensure the user has enough credit to make the purchase
-        credit_required = self.__get_cart_value(cart) - self.user.credit
-        # Notify user in case of insufficient credit
-        if credit_required > 0:
-            self.bot.send_message(self.chat.id, self.loc.get("error_not_enough_credit"))
-            # Suggest payment for missing credit value if configuration allows refill
-            if self.cfg["Payments"]["CreditCard"]["credit_card_token"] != "" \
-                    and self.cfg["Appearance"]["refill_on_checkout"] \
-                    and self.Price(self.cfg["Payments"]["CreditCard"]["min_amount"]) <= \
-                    credit_required <= \
-                    self.Price(self.cfg["Payments"]["CreditCard"]["max_amount"]):
-                self.__make_payment(self.Price(credit_required))
-        # If afer requested payment credit is still insufficient (either payment failure or cancel)
-        if self.user.credit < self.__get_cart_value(cart):
-            # Rollback all the changes
-            self.session.rollback()
-        else:
+        # credit_required = self.__get_cart_value(cart) - self.user.credit
+        # # Notify user in case of insufficient credit
+        # if credit_required > 0:
+        #     self.bot.send_message(self.chat.id, self.loc.get("error_not_enough_credit"))
+        #     # Suggest payment for missing credit value if configuration allows refill
+        #     if self.cfg["Payments"]["CreditCard"]["credit_card_token"] != "" \
+        #             and self.cfg["Appearance"]["refill_on_checkout"] \
+        #             and self.Price(self.cfg["Payments"]["CreditCard"]["min_amount"]) <= \
+        #             credit_required <= \
+        #             self.Price(self.cfg["Payments"]["CreditCard"]["max_amount"]):
+        #         self.__make_payment(self.Price(credit_required))
+        # # If afer requested payment credit is still insufficient (either payment failure or cancel)
+        # if self.user.credit < self.__get_cart_value(cart):
+        #     # Rollback all the changes
+        #     self.session.rollback()
+        # else:
             # User has credit and valid order, perform transaction now
-            self.__order_transaction(order=order, value=-int(self.__get_cart_value(cart)))
+        self.__order_transaction(order=order, value=-int(self.__get_cart_value(cart)))
 
 
         # self.bot.edit_message_text(chat_id=self.chat.id,
@@ -1041,7 +1044,7 @@ class Worker(threading.Thread):
         order_keyboard = telegram.InlineKeyboardMarkup(
             [
                 [telegram.InlineKeyboardButton(self.loc.get("menu_complete"), callback_data="order_complete")],
-                [telegram.InlineKeyboardButton(self.loc.get("menu_refund"), callback_data="order_refund")]
+                # [telegram.InlineKeyboardButton(self.loc.get("menu_refund"), callback_data="order_refund")]
             ])
         # Notify them of the new placed order
         for admin in admins:
@@ -1231,10 +1234,10 @@ class Worker(threading.Thread):
                 keyboard.append([self.loc.get("menu_products")])
             if self.admin.receive_orders:
                 keyboard.append([self.loc.get("menu_orders")])
-            if self.admin.create_transactions:
-                if self.cfg["Payments"]["Cash"]["enable_create_transaction"]:
-                    keyboard.append([self.loc.get("menu_edit_credit")])
-                keyboard.append([self.loc.get("menu_transactions"), self.loc.get("menu_csv")])
+            if self.admin.show_reports:
+                # if self.cfg["Payments"]["Cash"]["enable_create_transaction"]:
+                #     keyboard.append([self.loc.get("menu_edit_credit")])
+                keyboard.append([self.loc.get("menu_csv")])
             if self.admin.is_owner:
                 keyboard.append([self.loc.get("menu_edit_admins")])
             keyboard.append([self.loc.get("menu_user_mode")])
@@ -1246,8 +1249,8 @@ class Worker(threading.Thread):
                                                           self.loc.get("menu_products"),
                                                           self.loc.get("menu_orders"),
                                                           self.loc.get("menu_user_mode"),
-                                                          self.loc.get("menu_edit_credit"),
-                                                          self.loc.get("menu_transactions"),
+                                                        #   self.loc.get("menu_edit_credit"),
+                                                        #   self.loc.get("menu_transactions"),
                                                           self.loc.get("menu_csv"),
                                                           self.loc.get("menu_edit_admins")])
             if selection == self.loc.get("menu_category") and self.admin.edit_categorys:
@@ -1262,9 +1265,9 @@ class Worker(threading.Thread):
                 # Open the orders menu
                 self.__orders_menu()
             # If the user has selected the Transactions option and has the privileges to perform the action...
-            elif selection == self.loc.get("menu_edit_credit") and self.admin.create_transactions:
-                # Open the edit credit menu
-                self.__create_transaction()
+            # elif selection == self.loc.get("menu_edit_credit") and self.admin.create_transactions:
+            #     # Open the edit credit menu
+            #     self.__create_transaction()
             # If the user has selected the User mode option and has the privileges to perform the action...
             elif selection == self.loc.get("menu_user_mode"):
                 # Tell the user how to go back to admin menu
@@ -1276,13 +1279,13 @@ class Worker(threading.Thread):
                 # Open the edit admin menu
                 self.__add_admin()
             # If the user has selected the Transactions option and has the privileges to perform the action...
-            elif selection == self.loc.get("menu_transactions") and self.admin.create_transactions:
-                # Open the transaction pages
-                self.__transaction_pages()
+            # elif selection == self.loc.get("menu_transactions") and self.admin.create_transactions:
+            #     # Open the transaction pages
+            #     self.__transaction_pages()
             # If the user has selected the .csv option and has the privileges to perform the action...
-            elif selection == self.loc.get("menu_csv") and self.admin.create_transactions:
+            elif selection == self.loc.get("menu_csv") and self.admin.show_reports:
                 # Generate the .csv file
-                self.__transactions_file()
+                self.__orders_file()
 
 
     def __categorys_menu(self):
@@ -1720,9 +1723,9 @@ class Worker(threading.Thread):
                               reply_markup=stop_keyboard)
         # Create the order keyboard
         order_keyboard = telegram.InlineKeyboardMarkup([[telegram.InlineKeyboardButton(self.loc.get("menu_complete"),
-                                                                                       callback_data="order_complete")],
-                                                        [telegram.InlineKeyboardButton(self.loc.get("menu_refund"),
-                                                                                       callback_data="order_refund")]])
+                                                                                       callback_data="order_complete")],])
+                                                        # [telegram.InlineKeyboardButton(self.loc.get("menu_refund"),
+                                                        #                                callback_data="order_refund")]
         # Display the past pending orders
         orders = self.session.query(db.Order) \
             .filter_by(delivery_date=None, refund_date=None) \
@@ -1767,38 +1770,38 @@ class Worker(threading.Thread):
                 self.bot.send_message(order.user_id,
                                       self.loc.get("notification_order_completed",
                                                    order=order.text(w=self, user=True)))
-            # If the user pressed the refund order button, refund the order...
-            elif update.data == "order_refund":
-                # Ask for a refund reason
-                reason_msg = self.bot.send_message(self.chat.id, self.loc.get("ask_refund_reason"),
-                                                   reply_markup=cancel_keyboard)
-                # Wait for a reply
-                reply = self.__wait_for_regex("(.*)", cancellable=True)
-                # If the user pressed the cancel button, cancel the refund
-                if isinstance(reply, CancelSignal):
-                    # Delete the message asking for the refund reason
-                    self.bot.delete_message(self.chat.id, reason_msg.message_id)
-                    continue
-                # Mark the order as refunded
-                order.refund_date = datetime.datetime.now()
-                # Save the refund reason
-                order.refund_reason = replyCancelSignal
-                # Refund the credit, reverting the old transaction
-                order.transaction.refunded = True
-                # Update the user's credit
-                order.user.recalculate_credit()
-                # Commit the changes
-                self.session.commit()
-                # Update the order message
-                self.bot.edit_message_text(order.text(w=self),
-                                           chat_id=self.chat.id,
-                                           message_id=update.message.message_id)
-                # Notify the user of the refund
-                self.bot.send_message(order.user_id,
-                                      self.loc.get("notification_order_refunded", order=order.text(w=self,
-                                                                                                   user=True)))
-                # Notify the admin of the refund
-                self.bot.send_message(self.chat.id, self.loc.get("success_order_refunded", order_id=order.order_id))
+            # # If the user pressed the refund order button, refund the order...
+            # elif update.data == "order_refund":
+            #     # Ask for a refund reason
+            #     reason_msg = self.bot.send_message(self.chat.id, self.loc.get("ask_refund_reason"),
+            #                                        reply_markup=cancel_keyboard)
+            #     # Wait for a reply
+            #     reply = self.__wait_for_regex("(.*)", cancellable=True)
+            #     # If the user pressed the cancel button, cancel the refund
+            #     if isinstance(reply, CancelSignal):
+            #         # Delete the message asking for the refund reason
+            #         self.bot.delete_message(self.chat.id, reason_msg.message_id)
+            #         continue
+            #     # Mark the order as refunded
+            #     order.refund_date = datetime.datetime.now()
+            #     # Save the refund reason
+            #     order.refund_reason = replyCancelSignal
+            #     # Refund the credit, reverting the old transaction
+            #     order.transaction.refunded = True
+            #     # Update the user's credit
+            #     order.user.recalculate_credit()
+            #     # Commit the changes
+            #     self.session.commit()
+            #     # Update the order message
+            #     self.bot.edit_message_text(order.text(w=self),
+            #                                chat_id=self.chat.id,
+            #                                message_id=update.message.message_id)
+            #     # Notify the user of the refund
+            #     self.bot.send_message(order.user_id,
+            #                           self.loc.get("notification_order_refunded", order=order.text(w=self,
+            #                                                                                        user=True)))
+            #     # Notify the admin of the refund
+            #     self.bot.send_message(self.chat.id, self.loc.get("success_order_refunded", order_id=order.order_id))
 
     def __create_transaction(self):
         """Edit manually the credit of an user."""
@@ -1849,8 +1852,8 @@ class Worker(threading.Thread):
         """Help menu. Allows the user to ask for assistance, get a guide or see some info about the bot."""
         log.debug("Displaying __help_menu")
         # Create a keyboard with the user help menu
-        keyboard = [[telegram.KeyboardButton(self.loc.get("menu_guide"))],
-                    [telegram.KeyboardButton(self.loc.get("menu_contact_shopkeeper"))],
+        # [telegram.KeyboardButton(self.loc.get("menu_guide"))],
+        keyboard = [[telegram.KeyboardButton(self.loc.get("menu_contact_shopkeeper"))],
                     [telegram.KeyboardButton(self.loc.get("menu_cancel"))]]
         # Send the previously created keyboard to the user (ensuring it can be clicked only 1 time)
         self.bot.send_message(self.chat.id,
@@ -1858,15 +1861,15 @@ class Worker(threading.Thread):
                               reply_markup=telegram.ReplyKeyboardMarkup(keyboard, one_time_keyboard=True))
         # Wait for a reply from the user
         selection = self.__wait_for_specific_message([
-            self.loc.get("menu_guide"),
+            # self.loc.get("menu_guide"),
             self.loc.get("menu_contact_shopkeeper")
         ], cancellable=True)
         # If the user has selected the Guide option...
-        if selection == self.loc.get("menu_guide"):
-            # Send them the bot guide
-            self.bot.send_message(self.chat.id, self.loc.get("help_msg"))
+        # if selection == self.loc.get("menu_guide"):
+        #     # Send them the bot guide
+        #     self.bot.send_message(self.chat.id, self.loc.get("help_msg"))
         # If the user has selected the Order Status option...
-        elif selection == self.loc.get("menu_contact_shopkeeper"):
+        if selection == self.loc.get("menu_contact_shopkeeper"):
             # Find the list of available shopkeepers
             shopkeepers = self.session.query(db.Admin).filter_by(display_on_help=True).join(db.User).all()
             # Create the string
@@ -1930,45 +1933,43 @@ class Worker(threading.Thread):
                 # Break the loop
                 break
 
-    def __transactions_file(self):
-        """Generate a .csv file containing the list of all transactions."""
-        log.debug("Generating __transaction_file")
+    def __orders_file(self):
+        """Generate a .csv file containing the list of all orders."""
+        log.debug("Generating __orders_file")
         # Retrieve all the transactions
-        transactions = self.session.query(db.Transaction).order_by(db.Transaction.transaction_id).all()
+        orders = self.session.query(db.Order).order_by(db.Order.order_id).all()
         # Write on the previously created file
-        with open(f"transactions_{self.chat.id}.csv", "w") as file:
+        with open(f"orders_{self.chat.id}.csv", "w") as file:
             # Write an header line
-            file.write(f"UserID;"
-                       f"TransactionValue;"
-                       f"TransactionNotes;"
-                       f"Provider;"
-                       f"ChargeID;"
-                       f"SpecifiedName;"
-                       f"SpecifiedPhone;"
-                       f"SpecifiedEmail;"
-                       f"Refunded?\n")
+            file.write(f"order_id;"
+                       f"user_id;"
+                       f"username;"
+                       f"creation_date;"
+                       f"delivery_date;"
+                       f"items;"
+                       f"notes;\n")
             # For each transaction; write a new line on file
-            for transaction in transactions:
-                file.write(f"{transaction.user_id if transaction.user_id is not None else ''};"
-                           f"{transaction.value if transaction.value is not None else ''};"
-                           f"{transaction.notes if transaction.notes is not None else ''};"
-                           f"{transaction.provider if transaction.provider is not None else ''};"
-                           f"{transaction.provider_charge_id if transaction.provider_charge_id is not None else ''};"
-                           f"{transaction.payment_name if transaction.payment_name is not None else ''};"
-                           f"{transaction.payment_phone if transaction.payment_phone is not None else ''};"
-                           f"{transaction.payment_email if transaction.payment_email is not None else ''};"
-                           f"{transaction.refunded if transaction.refunded is not None else ''}\n")
+            for order in orders:
+                order_names = [item.product.name for item in order.items]
+                order_names = ', '.join(order_names)
+                file.write(f"Заказ #{order.order_id if order.order_id is not None else ''};"
+                           f"{order.user_id if order.user_id is not None else ''};"
+                           f"@{order.user.username if order.user.username is not None else ''};"
+                           f"{order.creation_date if order.creation_date is not None else ''};"
+                           f"{order.delivery_date if order.delivery_date is not None else ''};"
+                           f"{order_names if order_names is not None else ''};"
+                           f"{order.notes if order.notes is not None else ''};\n")
         # Describe the file to the user
         self.bot.send_message(self.chat.id, self.loc.get("csv_caption"))
         # Reopen the file for reading
-        with open(f"transactions_{self.chat.id}.csv") as file:
+        with open(f"orders_{self.chat.id}.csv") as file:
             # Send the file via a manual request to Telegram
             requests.post(f"https://api.telegram.org/bot{self.cfg['Telegram']['token']}/sendDocument",
                           files={"document": file},
                           params={"chat_id": self.chat.id,
                                   "parse_mode": "HTML"})
         # Delete the created file
-        os.remove(f"transactions_{self.chat.id}.csv")
+        os.remove(f"orders_{self.chat.id}.csv")
 
     def __add_admin(self):
         """Add an administrator to the bot."""
@@ -1997,7 +1998,7 @@ class Worker(threading.Thread):
                              edit_categorys=False,
                              edit_products=False,
                              receive_orders=False,
-                             create_transactions=False,
+                             show_reports=False,
                              is_owner=False,
                              display_on_help=False)
             self.session.add(admin)
@@ -2020,8 +2021,8 @@ class Worker(threading.Thread):
                     callback_data="toggle_receive_orders"
                 )],
                 [telegram.InlineKeyboardButton(
-                    f"{self.loc.boolmoji(admin.create_transactions)} {self.loc.get('prop_create_transactions')}",
-                    callback_data="toggle_create_transactions"
+                    f"{self.loc.boolmoji(admin.show_reports)} {self.loc.get('prop_show_reports')}",
+                    callback_data="toggle_show_reports"
                 )],
                 [telegram.InlineKeyboardButton(
                     f"{self.loc.boolmoji(admin.display_on_help)} {self.loc.get('prop_display_on_help')}",
@@ -2045,8 +2046,8 @@ class Worker(threading.Thread):
                 admin.edit_products = not admin.edit_products
             elif callback.data == "toggle_receive_orders":
                 admin.receive_orders = not admin.receive_orders
-            elif callback.data == "toggle_create_transactions":
-                admin.create_transactions = not admin.create_transactions
+            elif callback.data == "toggle_show_reports":
+                admin.show_reports = not admin.show_reports
             elif callback.data == "toggle_display_on_help":
                 admin.display_on_help = not admin.display_on_help
             elif callback.data == "cmd_done":
@@ -2059,10 +2060,10 @@ class Worker(threading.Thread):
         keyboard = []
         options: Dict[str, str] = {}
         # https://en.wikipedia.org/wiki/List_of_language_names
-        if "it" in self.cfg["Language"]["enabled_languages"]:
-            lang = "🇮🇹 Italiano"
-            keyboard.append([telegram.KeyboardButton(lang)])
-            options[lang] = "it"
+        # if "it" in self.cfg["Language"]["enabled_languages"]:
+        #     lang = "🇮🇹 Italiano"
+        #     keyboard.append([telegram.KeyboardButton(lang)])
+        #     options[lang] = "it"
         if "en" in self.cfg["Language"]["enabled_languages"]:
             lang = "🇬🇧 English"
             keyboard.append([telegram.KeyboardButton(lang)])
@@ -2071,26 +2072,26 @@ class Worker(threading.Thread):
             lang = "🇷🇺 Русский"
             keyboard.append([telegram.KeyboardButton(lang)])
             options[lang] = "ru"
-        if "uk" in self.cfg["Language"]["enabled_languages"]:
-            lang = "🇺🇦 Українська"
-            keyboard.append([telegram.KeyboardButton(lang)])
-            options[lang] = "uk"
-        if "zh_cn" in self.cfg["Language"]["enabled_languages"]:
-            lang = "🇨🇳 简体中文"
-            keyboard.append([telegram.KeyboardButton(lang)])
-            options[lang] = "zh_cn"
-        if "he" in self.cfg["Language"]["enabled_languages"]:
-            lang = "🇮🇱 עברית"
-            keyboard.append([telegram.KeyboardButton(lang)])
-            options[lang] = "he"
-        if "es_mx" in self.cfg["Language"]["enabled_languages"]:
-            lang = "🇲🇽 Español"
-            keyboard.append([telegram.KeyboardButton(lang)])
-            options[lang] = "es_mx"
-        if "pt_br" in self.cfg["Language"]["enabled_languages"]:
-            lang = "🇧🇷 Português"
-            keyboard.append([telegram.KeyboardButton(lang)])
-            options[lang] = "pt_br"
+        # if "uk" in self.cfg["Language"]["enabled_languages"]:
+        #     lang = "🇺🇦 Українська"
+        #     keyboard.append([telegram.KeyboardButton(lang)])
+        #     options[lang] = "uk"
+        # if "zh_cn" in self.cfg["Language"]["enabled_languages"]:
+        #     lang = "🇨🇳 简体中文"
+        #     keyboard.append([telegram.KeyboardButton(lang)])
+        #     options[lang] = "zh_cn"
+        # if "he" in self.cfg["Language"]["enabled_languages"]:
+        #     lang = "🇮🇱 עברית"
+        #     keyboard.append([telegram.KeyboardButton(lang)])
+        #     options[lang] = "he"
+        # if "es_mx" in self.cfg["Language"]["enabled_languages"]:
+        #     lang = "🇲🇽 Español"
+        #     keyboard.append([telegram.KeyboardButton(lang)])
+        #     options[lang] = "es_mx"
+        # if "pt_br" in self.cfg["Language"]["enabled_languages"]:
+        #     lang = "🇧🇷 Português"
+        #     keyboard.append([telegram.KeyboardButton(lang)])
+        #     options[lang] = "pt_br"
         # Send the previously created keyboard to the user (ensuring it can be clicked only 1 time)
         self.bot.send_message(self.chat.id,
                               self.loc.get("conversation_language_select"),
