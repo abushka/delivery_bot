@@ -513,7 +513,9 @@ class Worker(threading.Thread):
         category_row = []
 
         for category in categorys:
-            category_row.append(telegram.InlineKeyboardButton(str(category.name), callback_data=str(f'category-{category.id}')))
+            product_count = self.session.query(db.Product).filter_by(category_id=category.id, deleted=False).count()
+            if product_count > 0:
+                category_row.append(telegram.InlineKeyboardButton(str(category.name), callback_data=str(f'category-{category.id}')))
             if len(category_row) == 4:
                 category_inline_buttons.append(category_row)
                 category_row = []
@@ -529,9 +531,6 @@ class Worker(threading.Thread):
         final_message_count = 0
         message_count = 0
         message = None
-        
-
-
 
         final_msg = self.bot.send_message(self.chat.id,
                                           text="Выберите категорию продукта",
@@ -544,37 +543,54 @@ class Worker(threading.Thread):
                             message_id=final_msg['message_id'],
                             text=self.loc.get("menu_cancel"))
                 self.__user_menu()
+
+            if update.data == "go_to_category":
+                final_msg = self.bot.edit_message_text(chat_id=self.chat.id,
+                                                message_id=final_msg['message_id'],
+                                                text="Выберите категорию продукта",
+                                                reply_markup=category_inline_keyboard)
+                
+                # message = self.bot.delete_message(chat_id=self.chat.id,
+                #                                    message_id=message['message_id'])
+                
+                # message = None
+                # message_count = 0
+                
             if update.data.split("-")[0] == "category":
                 category_id = int(update.data.split("-")[1])
                 products = self.session.query(db.Product).filter_by(category_id=category_id).all()
                 if len(products) > 0:
+                    row = []
+                    inline_buttons = []
                     for product in products:
                         row.append(telegram.InlineKeyboardButton(str(product.name), callback_data=str(f'product-{product.id}')))
                         if len(row) == 4:
                             inline_buttons.append(row)
                             row = []
                     inline_buttons.append(row)
-                            # Create the keyboard with the cancel button
+
+                    inline_buttons.append([telegram.InlineKeyboardButton(self.loc.get("menu_from_products_to_category"),
+                                                                callback_data="go_to_category")])
+                    # Create the keyboard with the cancel button
                     inline_buttons.append([telegram.InlineKeyboardButton(self.loc.get("menu_cancel"),
                                                                 callback_data="cart_cancel")])
+                    
                     inline_keyboard = telegram.InlineKeyboardMarkup(inline_buttons)
 
                     self.bot.edit_message_text(chat_id=self.chat.id,
                                 message_id=final_msg['message_id'],
                                 text=self.loc.get("ask_product"),
                                 reply_markup=inline_keyboard)
-                else:
-                    self.bot.edit_message_text(chat_id=self.chat.id,
-                                message_id=final_msg['message_id'],
-                                text=self.loc.get("no_products_in_the_category"))
-                    self.__category_menu()
+                # else:
+                #     self.bot.edit_message_text(chat_id=self.chat.id,
+                #                 message_id=final_msg['message_id'],
+                #                 text=self.loc.get("no_products_in_the_category"))
+                #     self.__category_menu()
+
                 
             if update.data.split("-")[0] == 'product':
-                row = []
-                inline_buttons = []
                 product_id = int(update.data.split("-")[1])
                 product = self.session.query(db.Product).get(product_id)
-
 
                 # Create the keyboard with the cancel button
                 inline_keyboard = telegram.InlineKeyboardMarkup([[telegram.InlineKeyboardButton(self.loc.get("menu_cancel"),
@@ -594,8 +610,6 @@ class Worker(threading.Thread):
                         [telegram.InlineKeyboardButton(self.loc.get("menu_cancel"), callback_data="cart_cancel")],
                         [telegram.InlineKeyboardButton(self.loc.get("menu_done"), callback_data="cart_done")]
                     ])
-
-                
 
                 # проходим циклом по словарю и ищем продукт
                 for key, value in cart.items():
@@ -620,7 +634,6 @@ class Worker(threading.Thread):
                                                        callback_data="cart_remove")]
                     ])
                 
-
                 if message_count == 0:
                     message = product.send_as_message(w=self, chat_id=self.chat.id)
 
