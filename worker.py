@@ -473,9 +473,9 @@ class Worker(threading.Thread):
             if selection == self.loc.get("user_menu_category"):
                 self.__category_menu()
             # If the user has selected the Order option...
-            if selection == self.loc.get("menu_order"):
+            # if selection == self.loc.get("menu_order"):
                 # Open the order menu
-                self.__order_menu()
+                # self.__order_menu()
             # If the user has selected the Order Status option...
             elif selection == self.loc.get("menu_order_status"):
                 # Display the order(s) status
@@ -503,8 +503,17 @@ class Worker(threading.Thread):
         """User menu to categorys from the shop."""
         log.debug("Displaying __category_menu")
 
+        page = 0
+        page_products = 0
+        page_size = 10
+        
+        categorys = []
         # products = self.session.query(db.Product).filter_by(deleted=False).all()
-        categorys = self.session.query(db.Category).filter_by(deleted=False).all()
+        categorys_kovsh = self.session.query(db.Category).filter_by(deleted=False).all()
+        for category in categorys_kovsh:
+            product_count = self.session.query(db.Product).filter_by(category_id=category.id, deleted=False).count()
+            if product_count > 0:
+                categorys.append(category)
 
         cart: Dict[db.Product, int] = {}
 
@@ -515,11 +524,18 @@ class Worker(threading.Thread):
         for category in categorys:
             product_count = self.session.query(db.Product).filter_by(category_id=category.id, deleted=False).count()
             if product_count > 0:
-                category_row.append(telegram.InlineKeyboardButton(str(category.name), callback_data=str(f'category-{category.id}')))
-            if len(category_row) == 4:
+                category_row.append(telegram.InlineKeyboardButton(str(category.name), callback_data=str(f'category-{category.id}-0')))
+            if len(category_row) == 2:
                 category_inline_buttons.append(category_row)
                 category_row = []
+            if len(category_inline_buttons) == page_size:
+                break
+                
         category_inline_buttons.append(category_row)
+
+        if len(categorys) > page_size:
+            category_inline_buttons.append([telegram.InlineKeyboardButton(self.loc.get("menu_next"),
+                                                                callback_data="cmd_next")])
 
         category_inline_buttons.append([telegram.InlineKeyboardButton(self.loc.get("menu_cancel"),
                                                             callback_data="cart_cancel")])
@@ -537,7 +553,177 @@ class Worker(threading.Thread):
                                           reply_markup=category_inline_keyboard)
         
         while True:
+
             update = self.__wait_for_inlinekeyboard_callback(cancellable=True)
+
+            # category_inline_buttons.append(category_row)
+
+            # categories = self.session.query(db.Category) \
+            #         .filter_by(deleted=False) \
+            #         .limit(4) \
+            #         .offset(4 * page) \
+            #         .all()
+
+                        # If Previous was selected...
+            if update.data == "cmd_previous" and page != 0:
+                # Go back one page
+                page -= 1
+                # Create a list to be converted in inline keyboard markup
+                # products = self.session.query(db.Product).filter_by(deleted=False).all()
+                start_index = page * page_size
+                end_index = start_index + page_size
+
+                categories = categorys[start_index:end_index]
+
+                # print(len(categorys))
+                # print(start_index)
+                # print(end_index)
+                # print(len(categories))
+
+                category_inline_buttons = []
+                category_row = []
+
+                for category in categories:
+                    product_count = self.session.query(db.Product).filter_by(category_id=category.id, deleted=False).count()
+                    if product_count > 0:
+                        category_row.append(telegram.InlineKeyboardButton(str(category.name), callback_data=str(f'category-{category.id}-0')))
+                    if len(category_row) == 2:
+                        category_inline_buttons.append(category_row)
+                        category_row = []
+                    if len(category_inline_buttons) == page_size:
+                        break
+                category_inline_buttons.append(category_row)
+
+                
+                if page != 0 and len(categorys) > end_index:
+                    category_inline_buttons.append([
+                        telegram.InlineKeyboardButton(self.loc.get("menu_previous"), callback_data="cmd_previous"),
+                        telegram.InlineKeyboardButton(self.loc.get("menu_next"), callback_data="cmd_next")
+                        ])
+
+                elif len(categorys) > end_index and page == 0:
+                    category_inline_buttons.append([telegram.InlineKeyboardButton(self.loc.get("menu_next"),
+                                                                        callback_data="cmd_next")])
+                    
+                elif len(categorys) < end_index and page != 0:
+                    # Add a previous page button
+                    category_inline_buttons.append([
+                        telegram.InlineKeyboardButton(self.loc.get("menu_previous"), callback_data="cmd_previous")
+                        ])
+
+                category_inline_buttons.append([telegram.InlineKeyboardButton(self.loc.get("menu_cancel"),
+                                                                    callback_data="cart_cancel")])
+                
+                category_inline_keyboard = telegram.InlineKeyboardMarkup(category_inline_buttons)
+
+                final_msg = self.bot.edit_message_text(chat_id=self.chat.id,
+                                                message_id=final_msg['message_id'],
+                                                text=self.loc.get("ask_product_category_with_page", page=int(page + 1)),
+                                                reply_markup=category_inline_keyboard)
+            # If Next was selected...
+            elif update.data == "cmd_next":
+                # Go to the next page
+                page += 1
+
+                # products = self.session.query(db.Product).filter_by(deleted=False).all()
+                start_index = page * page_size
+                end_index = start_index + page_size
+
+                categories = categorys[start_index:end_index]
+
+                category_inline_buttons = []
+                category_row = []
+                # print(len(categories))
+
+                for category in categories:
+                    product_count = self.session.query(db.Product).filter_by(category_id=category.id, deleted=False).count()
+                    if product_count > 0:
+                        category_row.append(telegram.InlineKeyboardButton(str(category.name), callback_data=str(f'category-{category.id}-0')))
+                    if len(category_row) == 2:
+                        category_inline_buttons.append(category_row)
+                        category_row = []
+                    if len(category_inline_buttons) == page_size:
+                        break
+                category_inline_buttons.append(category_row)
+
+
+                if page != 0 and len(categorys) > end_index:
+                    category_inline_buttons.append([
+                        telegram.InlineKeyboardButton(self.loc.get("menu_previous"), callback_data="cmd_previous"),
+                        telegram.InlineKeyboardButton(self.loc.get("menu_next"), callback_data="cmd_next")
+                        ])
+
+                elif len(categorys) > end_index and page == 0:
+                    category_inline_buttons.append([telegram.InlineKeyboardButton(self.loc.get("menu_next"),
+                                                                        callback_data="cmd_next")])
+                    
+                elif len(categorys) < end_index and page != 0:
+                    # Add a previous page button
+                    category_inline_buttons.append([
+                        telegram.InlineKeyboardButton(self.loc.get("menu_previous"), callback_data="cmd_previous")
+                        ])
+
+                category_inline_buttons.append([telegram.InlineKeyboardButton(self.loc.get("menu_cancel"),
+                                                                    callback_data="cart_cancel")])
+                
+                category_inline_keyboard = telegram.InlineKeyboardMarkup(category_inline_buttons)
+
+                final_msg = self.bot.edit_message_text(chat_id=self.chat.id,
+                                                message_id=final_msg['message_id'],
+                                                text=self.loc.get("ask_product_category_with_page", page=int(page + 1)),
+                                                reply_markup=category_inline_keyboard)
+
+                # categories = self.session.query(db.Category) \
+                #     .filter_by(deleted=False) \
+                #     .limit(4) \
+                #     .offset(4 * page) \
+                #     .all()
+                
+                # # Create a list to be converted in inline keyboard markup
+                # category_inline_buttons = []
+                # category_inline_keyboard = []
+                
+                # category_row = []
+
+                # for category in categories:
+                #     product_count = self.session.query(db.Product).filter_by(category_id=category.id, deleted=False).count()
+                #     if product_count > 0:
+                #         category_row.append(telegram.InlineKeyboardButton(str(category.name), callback_data=str(f'category-{category.id}')))
+                #     if len(category_row) == 4:
+                #         category_inline_buttons.append(category_row)
+                #         category_row = []
+                #         break
+
+                # # Don't add a previous page button if this is the first page
+                # if page != 0:
+                #     # Add a previous page button
+                #     category_inline_buttons.append(
+                #         telegram.InlineKeyboardButton(self.loc.get("menu_previous"), callback_data="cmd_previous")
+                #     )
+                # # Don't add a next page button if this is the last page
+                # if len(categories) == 4:
+                #     # Add a next page button
+                #     category_inline_buttons.append(
+                #         telegram.InlineKeyboardButton(self.loc.get("menu_next"), callback_data="cmd_next")
+                #     )
+
+                # # Create the inline keyboard markup
+                # category_inline_keyboard = telegram.InlineKeyboardMarkup(category_inline_buttons)
+
+                # # Update the previously sent message
+                # self.bot.edit_message_text(chat_id=self.chat.id, 
+                #             message_id=final_msg['message_id'], 
+                #             text="Выберите категорию продукта",
+                #             reply_markup=category_inline_keyboard)
+
+
+            # categories = self.session.query(db.Category).filter_by(deleted=False).all()
+
+            # if update.data == "next_page":
+            #     page += 1
+
+
+
             if update.data == "cart_cancel":
                 self.bot.edit_message_text(chat_id=self.chat.id,
                             message_id=final_msg['message_id'],
@@ -545,9 +731,52 @@ class Worker(threading.Thread):
                 self.__user_menu()
 
             if update.data == "go_to_category":
+                # Create a list to be converted in inline keyboard markup
+                # products = self.session.query(db.Product).filter_by(deleted=False).all()
+                start_index = page * page_size
+                end_index = start_index + page_size
+
+                categories = categorys[start_index:end_index]
+
+                category_inline_buttons = []
+                category_row = []
+
+                for category in categories:
+                    product_count = self.session.query(db.Product).filter_by(category_id=category.id, deleted=False).count()
+                    if product_count > 0:
+                        category_row.append(telegram.InlineKeyboardButton(str(category.name), callback_data=str(f'category-{category.id}-0')))
+                    if len(category_row) == 2:
+                        category_inline_buttons.append(category_row)
+                        category_row = []
+                    if len(category_inline_buttons) == page_size:
+                        break
+                category_inline_buttons.append(category_row)
+
+                    
+                if page != 0 and len(categorys) > end_index:
+                    category_inline_buttons.append([
+                        telegram.InlineKeyboardButton(self.loc.get("menu_previous"), callback_data="cmd_previous"),
+                        telegram.InlineKeyboardButton(self.loc.get("menu_next"), callback_data="cmd_next")
+                        ])
+
+                elif len(categorys) > end_index and page == 0:
+                    category_inline_buttons.append([telegram.InlineKeyboardButton(self.loc.get("menu_next"),
+                                                                        callback_data="cmd_next")])
+                    
+                elif len(categorys) < end_index and page != 0:
+                    # Add a previous page button
+                    category_inline_buttons.append([
+                        telegram.InlineKeyboardButton(self.loc.get("menu_previous"), callback_data="cmd_previous")
+                        ])
+
+                category_inline_buttons.append([telegram.InlineKeyboardButton(self.loc.get("menu_cancel"),
+                                                                    callback_data="cart_cancel")])
+                
+                category_inline_keyboard = telegram.InlineKeyboardMarkup(category_inline_buttons)
+
                 final_msg = self.bot.edit_message_text(chat_id=self.chat.id,
                                                 message_id=final_msg['message_id'],
-                                                text="Выберите категорию продукта",
+                                                text=self.loc.get("ask_product_category_with_page", page=int(page + 1)),
                                                 reply_markup=category_inline_keyboard)
                 
                 # message = self.bot.delete_message(chat_id=self.chat.id,
@@ -557,20 +786,52 @@ class Worker(threading.Thread):
                 # message_count = 0
                 
             if update.data.split("-")[0] == "category":
+                print(update.data)
+                page_products = int(update.data.split("-")[2])
+
+                start_index = page_products * page_size
+                end_index = start_index + page_size
+
                 category_id = int(update.data.split("-")[1])
-                products = self.session.query(db.Product).filter_by(category_id=category_id).all()
+                products_all = self.session.query(db.Product).filter_by(category_id=category_id).all()
+
+                products = products_all[start_index:end_index]
+
                 if len(products) > 0:
                     row = []
                     inline_buttons = []
+
                     for product in products:
                         row.append(telegram.InlineKeyboardButton(str(product.name), callback_data=str(f'product-{product.id}')))
-                        if len(row) == 4:
+                        if len(row) == 2:
                             inline_buttons.append(row)
                             row = []
+                        if len(inline_buttons) == page_size:
+                            break
+
+
+
                     inline_buttons.append(row)
 
                     inline_buttons.append([telegram.InlineKeyboardButton(self.loc.get("menu_from_products_to_category"),
                                                                 callback_data="go_to_category")])
+                    
+                    if page_products != 0 and len(products_all) > end_index:
+                        inline_buttons.append([
+                            telegram.InlineKeyboardButton(self.loc.get("menu_previous"), callback_data=str(f'category-{category_id}-{int(page_products) - 1}')),
+                            telegram.InlineKeyboardButton(self.loc.get("menu_next"), callback_data=str(f'category-{category_id}-{int(page_products) + 1}'))
+                            ])
+
+                    elif len(products_all) > end_index and page_products == 0:
+                        inline_buttons.append([telegram.InlineKeyboardButton(self.loc.get("menu_next"),
+                                                                            callback_data=str(f'category-{category_id}-{int(page_products) + 1}'))])
+                        
+                    elif len(products_all) < end_index and page_products != 0:
+                        # Add a previous page_products button
+                        inline_buttons.append([
+                            telegram.InlineKeyboardButton(self.loc.get("menu_previous"), callback_data=str(f'category-{category_id}-{int(page_products) - 1}'))
+                            ])
+
                     # Create the keyboard with the cancel button
                     inline_buttons.append([telegram.InlineKeyboardButton(self.loc.get("menu_cancel"),
                                                                 callback_data="cart_cancel")])
@@ -615,10 +876,10 @@ class Worker(threading.Thread):
                 for key, value in cart.items():
                     if value[0].name == product.name:
                         # print(value[0])
-                        print("Продукт найден в словаре!")
+                        # print("Продукт найден в словаре!")
                         break
                 else:
-                    print("Продукт не найден в словаре.")
+                    # print("Продукт не найден в словаре.")
                     cart[product.name] = [product, 0]
 
                 # Create the inline keyboard to add the product to the cart
@@ -1451,16 +1712,17 @@ class Worker(threading.Thread):
         category_row = []
         for product in products:
             row.append(telegram.InlineKeyboardButton(str(product.name), callback_data=str(f'product-{product.id}')))
-            if len(row) == 4:
+            if len(row) == 2:
                 inline_buttons.append(row)
                 row = []
         inline_buttons.append(row)
 
         for category in categorys:
-            category_row.append(telegram.InlineKeyboardButton(str(category.name), callback_data=str(f'category-{category.id}')))
-            if len(category_row) == 4:
+            category_row.append(telegram.InlineKeyboardButton(str(category.name), callback_data=str(f'category-{category.id}-0')))
+            if len(category_row) == 2:
                 category_inline_buttons.append(category_row)
                 category_row = []
+
         category_inline_buttons.append(category_row)
 
         # Create the keyboard with the cancel button
@@ -1494,7 +1756,7 @@ class Worker(threading.Thread):
                                            reply_markup=inline_keyboard)
                 
             if update.data.split("-")[0] == 'product':
-                print(update)
+                # print(update)
 
                 product_id = int(update.data.split("-")[1])
                 product = self.session.query(db.Product).get(product_id)
