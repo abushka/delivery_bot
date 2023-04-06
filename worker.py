@@ -9,6 +9,7 @@ import traceback
 import uuid
 from html import escape
 from typing import *
+from sqlalchemy import func
 
 import requests
 import sqlalchemy
@@ -505,12 +506,20 @@ class Worker(threading.Thread):
 
         page = 0
         page_products = 0
-        page_size = 10
+        page_size = 4
         
         # categorys = []
         # products = self.session.query(db.Product).filter_by(deleted=False).all()
-        categorys_kovsh = self.session.query(db.Category).filter_by(deleted=False).all()
-        categorys = list(filter(lambda category: self.session.query(db.Product).filter_by(category_id=category.id, deleted=False).count() > 0, categorys_kovsh))
+        # categorys_kovsh = self.session.query(db.Category).filter_by(deleted=False).all()
+        # categorys = list(filter(lambda category: self.session.query(db.Product).filter_by(category_id=category.id, deleted=False).count() > 0, categorys_kovsh))
+
+        categorys = (self.session.query(db.Category)
+            .filter_by(deleted=False)
+            .join(db.Product)
+            .group_by(db.Category.id)
+            .having(func.count(db.Product.id) > 0)
+            .order_by(db.Category.id)
+            .all())
 
         cart: Dict[db.Product, int] = {}
 
@@ -607,7 +616,7 @@ class Worker(threading.Thread):
                                 
                 
             if update.data.split("-")[0] == "category":
-                print(update.data)
+                # print(update.data)
                 page_products = int(update.data.split("-")[2])
 
                 start_index = page_products * page_size
