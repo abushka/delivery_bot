@@ -2,6 +2,7 @@ version: "3"
 services:
   app:
     build: .
+    image: abushka/delivery_bot-master-app
     volumes:
       - .:/usr/src/greed/
       - ./config:/usr/src/greed/config
