@@ -183,6 +183,9 @@ menu_add_category = "✨ Новая категория"
 # Admin menu: add product
 menu_add_product = "✨ Новый продукт"
 
+# Admin menu: edit product
+menu_edit_product = "✏️ Изменить продукт"
+
 # Admin menu: delete category
 menu_delete_category = "❌ Удалить категорию"
 

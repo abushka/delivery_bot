@@ -1458,10 +1458,11 @@ class Worker(threading.Thread):
         # Create a list of product names
         product_names = [product.name for product in products]
         # Insert at the start of the list the add product option, the remove product option and the Cancel option
-        product_names.insert(0, self.loc.get("menu_cancel"))
-        product_names.insert(1, self.loc.get("menu_add_product"))
+        product_names.insert(0, self.loc.get("menu_add_product"))
+        product_names.insert(1, self.loc.get("menu_edit_product"))
         product_names.insert(2, self.loc.get("menu_category_assignment"))
         product_names.insert(3, self.loc.get("menu_delete_product"))
+        product_names.insert(4, self.loc.get("menu_cancel"))
         # Create a keyboard using the product names
         keyboard = [[telegram.KeyboardButton(product_name)] for product_name in product_names]
         # Send the previously created keyboard to the user (ensuring it can be clicked only 1 time)
@@ -1477,6 +1478,9 @@ class Worker(threading.Thread):
         elif selection == self.loc.get("menu_add_product"):
             # Open the add product menu
             self.__edit_product_menu()
+        elif selection == self.loc.get("menu_edit_product"):
+            # Open the edit product menu
+            self.__edit_products()
         # If the user has selected the add Category to Product option...
         elif selection == self.loc.get("menu_category_assignment"):
             # Open the add category to product menu
@@ -1486,11 +1490,11 @@ class Worker(threading.Thread):
             # Open the delete product menu
             self.__delete_product_menu()
         # If the user has selected a product
-        else:
-            # Find the selected product
-            product = self.session.query(db.Product).filter_by(name=selection, deleted=False).one()
-            # Open the edit menu for that specific product
-            self.__edit_product_menu(product=product)
+        # else:
+        #     # Find the selected product
+        #     product = self.session.query(db.Product).filter_by(name=selection, deleted=False).one()
+        #     # Open the edit menu for that specific product
+        #     self.__edit_product_menu(product=product)
 
 
     def __category_assigment(self, product: Optional[db.Product] = None):
@@ -1633,7 +1637,98 @@ class Worker(threading.Thread):
         #         self.bot.send_message(self.chat.id, self.loc.get("edit_current_value", value=escape(product.category_id)),
         #                               reply_markup=cancel)
         #         # Wait for an answer
+    def __create_products_keyboard(self, products, page, page_size):
+        """Create the inline keyboard for selecting a product."""
+        start_index = page * page_size
+        end_index = start_index + page_size
+        current_products = products[start_index:min(end_index, len(products))]
+
+        row = []
+        inline_buttons = []
+
+        for product in current_products:
+            row.append(telegram.InlineKeyboardButton(str(product.name), callback_data=str(f'product-{product.id}')))
+            if len(row) == 2:
+                inline_buttons.append(row)
+                row = []
+            if len(inline_buttons) == page_size:
+                break
+
+        inline_buttons.append(row)
+
+        if page != 0 and len(products) > end_index:
+            inline_buttons.append([
+                telegram.InlineKeyboardButton(self.loc.get("menu_previous"), callback_data="cmd_previous"),
+                telegram.InlineKeyboardButton(self.loc.get("menu_next"), callback_data="cmd_next")
+            ])
+
+        elif len(products) > end_index and page == 0:
+            inline_buttons.append([
+                telegram.InlineKeyboardButton(self.loc.get("menu_next"), callback_data="cmd_next")
+            ])
+                        
+        elif len(products) < end_index and page != 0:
+            # Add a previous page_products button
+            inline_buttons.append([
+                telegram.InlineKeyboardButton(self.loc.get("menu_previous"), callback_data="cmd_previous")
+            ])
+
+        # Create the keyboard with the cancel button
+        inline_buttons.append([
+            telegram.InlineKeyboardButton(self.loc.get("menu_cancel"), callback_data="cart_cancel")
+        ])
+        
+        inline_keyboard = telegram.InlineKeyboardMarkup(inline_buttons)
+
+        return inline_keyboard
+
+
+    def __edit_products(self):
+        """Select product and go to the hell"""
+        log.debug("Displaying __edit_products")
+        page = 0
+        page_size = 4
+
+        products = self.session.query(db.Product).filter_by(deleted=False).all()
+
+        if len(products) > 0:
+            inline_keyboard = self.__create_products_keyboard(products, page, page_size)
+
+            final_msg = self.bot.send_message(chat_id=self.chat.id,
+                        text=self.loc.get("ask_product"),
+                        reply_markup=inline_keyboard)
                 
+
+        while True:
+
+            update = self.__wait_for_inlinekeyboard_callback(cancellable=True)
+
+            if update.data == "cart_cancel":
+                self.bot.edit_message_text(chat_id=self.chat.id,
+                            message_id=final_msg['message_id'],
+                            text=self.loc.get("menu_cancel"))
+                self.__products_menu()
+                break
+
+            if update.data == "cmd_previous" and page != 0:
+                # Go back one page
+                page -= 1
+            elif update.data == "cmd_next":
+                # Go to the next page
+                page += 1
+
+            if update.data.split("-")[0] == "product":
+                selection = update.data.split("-")[1]
+                product = self.session.query(db.Product).filter_by(id=selection, deleted=False).one()
+                # Open the edit menu for that specific product
+                self.__edit_product_menu(product=product)
+
+            inline_keyboard = self.__create_products_keyboard(products, page, page_size)
+
+            final_msg = self.bot.edit_message_text(chat_id=self.chat.id,
+                        message_id=final_msg['message_id'],
+                        text=self.loc.get("ask_product"),
+                        reply_markup=inline_keyboard)
 
 
     def __edit_product_menu(self, product: Optional[db.Product] = None):
