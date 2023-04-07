@@ -180,6 +180,9 @@ menu_user_mode = "👤 Режим покупателя"
 # Admin menu: add category
 menu_add_category = "✨ Новая категория"
 
+# Admin menu: edit category
+menu_edit_category = "✏️ Изменить категорию"
+
 # Admin menu: add product
 menu_add_product = "✨ Новый продукт"
 
@@ -278,6 +281,8 @@ no_products_in_the_category = "В этой категории нет товар�
 # Add category: name?
 ask_category_name = "Как назовем категорию?"
 
+
+
 # Add product: name?
 ask_product_name = "Как назовем продукт?"
 
@@ -302,6 +307,11 @@ ask_product_category_with_page = "Выберите категорию товар
                                 "Вы сейчас на странице <b>{page}</b>"
 
 ask_product = "Выберите желаемый товар, чтобы добавить его в корзину"
+
+ask_edit_product = "Выберите какой продукт изменить"
+
+ask_edit_category = "Выберите какую категорию нужно изменить"
+
 
 # Order product: notes?
 ask_order_notes = "Оставить заметку к этом заказу?\n" \
@@ -423,8 +433,8 @@ success_category_edited = "✅ Категория успешно создана/
 success_product_edited = "✅ Продукт успешно создан/обновлен!"
 
 # Success: product has been a new category
-success_new_product_category = "Вы изменили категорию на <code>{category_name}</code> " \
-            "у продукта <code>{product_name}</code>"
+success_new_product_category = "У продукта <code>{product_name}</code> " \
+                                "изменилась категория на <code>{category_name}</code>"
 
 # Success: product has been marked as deleted in the database
 success_category_deleted = "✅ Категория успешно удалена!"
