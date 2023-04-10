@@ -43,6 +43,8 @@ timed_out_pause = 1
 error_pause = 5
 # Number of connections to keep in the connection pool
 con_pool_size = 10
+# Notify channel to new order
+notify_channel = 123456789
 
 
 # General payment settings

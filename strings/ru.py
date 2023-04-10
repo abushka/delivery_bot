@@ -183,6 +183,9 @@ menu_add_category = "✨ Новая категория"
 # Admin menu: edit category
 menu_edit_category = "✏️ Изменить категорию"
 
+# Admin menu: show categorys
+menu_show_categorys = "Показать категории"
+
 # Admin menu: add product
 menu_add_product = "✨ Новый продукт"
 
@@ -279,7 +282,22 @@ text_not_for_sale = "Не продаётся"
 no_products_in_the_category = "В этой категории нет товаров"
 
 # Add category: name?
-ask_category_name = "Как назовем категорию?"
+ask_category_name = "Как назовем категорию ?"
+
+# Add category: priority?
+ask_category_priority = "Какая будет приоритетность у категории ?\n\n" \
+                        "Существующие категории:\n\n " \
+                        "{categorys_info}"
+
+all_categorys = "Все категории"
+
+categorys_with_products = "Категории с продуктами"
+
+categorys_without_products = "Категории без продуктов"
+
+edit_showing_categorys_type = "Поменять тип вывода категорий"
+
+
 
 
 
@@ -356,6 +374,9 @@ prop_show_reports = "Смотреть отчёты"
 
 # Edit admin: show on help message?
 prop_display_on_help = "Показывать покупателям"
+
+# Edit admin: notify new order
+prop_live_mode = "Получать уведомления о новых заказах"
 
 # Thread has started downloading an image and might be unresponsive
 downloading_image = "Я загружаю фото!\n" \

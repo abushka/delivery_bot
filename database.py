@@ -94,11 +94,10 @@ class Category(DeferredReflection, TableDeclarativeBase):
     id = Column(Integer, primary_key=True)
     # Category name
     name = Column(String)
+    # Category priority
+    priority = Column(Integer)
     # Category has been deleted
     deleted = Column(Boolean, nullable=False)
-
-    # parent_id = Column(Integer, ForeignKey("categorys.id"))
-    # product_id = Column(Integer, ForeignKey("products.id"))
 
     # Extra table parameters
     __tablename__ = "categorys"
@@ -312,7 +311,7 @@ class Order(DeferredReflection, TableDeclarativeBase):
                    w.loc.get("order_number", id=self.order_id) + "\n" + \
                    w.loc.get("order_format_string",
                              user=self.user.mention(),
-                             date=self.creation_date.isoformat(),
+                             date=self.creation_date.strftime("%Y-%m-%d %H:%M:%S"),
                              items=items,
                              notes=self.notes if self.notes is not None else "",
                              value=str(w.Price(-self.transaction.value))) + \
